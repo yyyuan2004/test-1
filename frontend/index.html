@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PersonaMirror - AI Persona Chat</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Sidebar -->
+        <aside id="sidebar">
+            <div class="sidebar-header">
+                <h1 class="logo">
+                    <span class="logo-icon">&#9674;</span>
+                    PersonaMirror
+                </h1>
+                <button id="btn-new-chat" class="btn btn-primary" title="New Chat">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    New Chat
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <button class="nav-tab active" data-tab="chats">Chats</button>
+                <button class="nav-tab" data-tab="personas">Personas</button>
+                <button class="nav-tab" data-tab="settings">Settings</button>
+            </nav>
+
+            <!-- Chat list -->
+            <div id="panel-chats" class="sidebar-panel active">
+                <div id="conversation-list" class="item-list">
+                    <div class="empty-state">No conversations yet</div>
+                </div>
+            </div>
+
+            <!-- Persona list -->
+            <div id="panel-personas" class="sidebar-panel">
+                <div class="panel-actions">
+                    <button id="btn-upload" class="btn btn-secondary btn-sm">
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                            <path d="M8 2v8M4 6l4-4 4 4M2 12h12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Upload Chat Logs
+                    </button>
+                    <button id="btn-web-learn" class="btn btn-secondary btn-sm">
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                            <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="2"/>
+                            <path d="M2 8h12M8 2c-2 2-2 10 0 12M8 2c2 2 2 10 0 12" stroke="currentColor" stroke-width="1.5"/>
+                        </svg>
+                        Learn from Web
+                    </button>
+                </div>
+                <div id="persona-list" class="item-list">
+                    <div class="empty-state">No personas created yet.<br>Upload chat logs to get started.</div>
+                </div>
+            </div>
+
+            <!-- Settings panel -->
+            <div id="panel-settings" class="sidebar-panel">
+                <div class="settings-group">
+                    <label class="setting-label">LLM Backend</label>
+                    <select id="select-backend" class="setting-input">
+                        <option value="openai">OpenAI</option>
+                        <option value="anthropic">Anthropic Claude</option>
+                        <option value="local">Local Model</option>
+                    </select>
+                </div>
+                <div class="settings-group">
+                    <label class="setting-label">Theme</label>
+                    <select id="select-theme" class="setting-input">
+                        <option value="dark">Dark</option>
+                        <option value="light">Light</option>
+                    </select>
+                </div>
+                <div class="settings-group">
+                    <label class="setting-label">Model Info</label>
+                    <div id="model-info" class="setting-info">Loading...</div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main chat area -->
+        <main id="main">
+            <!-- Welcome screen -->
+            <div id="welcome-screen" class="welcome">
+                <div class="welcome-content">
+                    <div class="welcome-icon">&#9674;</div>
+                    <h2>Welcome to PersonaMirror</h2>
+                    <p>Create AI personas that mirror real people's speaking styles.</p>
+                    <div class="welcome-steps">
+                        <div class="step">
+                            <div class="step-num">1</div>
+                            <div class="step-text">Upload chat logs to create a persona</div>
+                        </div>
+                        <div class="step">
+                            <div class="step-num">2</div>
+                            <div class="step-text">Select a persona and start chatting</div>
+                        </div>
+                        <div class="step">
+                            <div class="step-num">3</div>
+                            <div class="step-text">The AI will learn and mimic that person's style</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat view -->
+            <div id="chat-view" class="chat-view hidden">
+                <div id="chat-header" class="chat-header">
+                    <div class="chat-title">
+                        <span id="chat-persona-name">New Chat</span>
+                        <span id="chat-persona-badge" class="badge hidden">Persona</span>
+                    </div>
+                </div>
+
+                <div id="chat-messages" class="chat-messages">
+                    <!-- Messages rendered here -->
+                </div>
+
+                <div class="chat-input-area">
+                    <div class="input-wrapper">
+                        <textarea
+                            id="chat-input"
+                            placeholder="Type a message... (Enter to send, Shift+Enter for new line)"
+                            rows="1"
+                        ></textarea>
+                        <button id="btn-send" class="btn-send" title="Send">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                <path d="M3 10l14-7-7 14v-7H3z" fill="currentColor"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Upload modal -->
+    <div id="modal-upload" class="modal hidden">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Upload Chat Logs</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Persona Name</label>
+                    <input type="text" id="upload-persona-name" placeholder="e.g., My Friend" class="setting-input">
+                </div>
+                <div class="form-group">
+                    <label>Target Speaker (whose style to learn)</label>
+                    <input type="text" id="upload-target-speaker" placeholder="e.g., John" class="setting-input">
+                </div>
+                <div class="form-group">
+                    <label>Existing Persona (optional, to add data)</label>
+                    <select id="upload-persona-select" class="setting-input">
+                        <option value="">Create new persona</option>
+                    </select>
+                </div>
+                <div class="upload-zone" id="upload-zone">
+                    <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                        <path d="M20 6v20M12 14l8-8 8 8" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M6 26v4a4 4 0 004 4h20a4 4 0 004-4v-4" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+                    </svg>
+                    <p>Drag & drop chat log files here</p>
+                    <p class="upload-hint">Supports WeChat, WhatsApp, and plain text formats</p>
+                    <input type="file" id="upload-file" accept=".txt,.html,.htm,.csv" multiple hidden>
+                    <button class="btn btn-secondary btn-sm" id="btn-browse">Browse Files</button>
+                </div>
+                <div id="upload-status" class="upload-status hidden"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary modal-cancel">Cancel</button>
+                <button class="btn btn-primary" id="btn-upload-submit" disabled>Upload & Analyze</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Web Learn modal -->
+    <div id="modal-web-learn" class="modal hidden">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Learn from Web</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>URL to learn from</label>
+                    <input type="url" id="web-learn-url" placeholder="https://..." class="setting-input">
+                </div>
+                <div class="form-group">
+                    <label>Associate with Persona (optional)</label>
+                    <select id="web-learn-persona-select" class="setting-input">
+                        <option value="">No persona (general knowledge)</option>
+                    </select>
+                </div>
+                <div id="web-learn-status" class="upload-status hidden"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary modal-cancel">Cancel</button>
+                <button class="btn btn-primary" id="btn-web-learn-submit">Learn</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Persona detail modal -->
+    <div id="modal-persona-detail" class="modal hidden">
+        <div class="modal-overlay"></div>
+        <div class="modal-content modal-wide">
+            <div class="modal-header">
+                <h3 id="persona-detail-title">Persona Details</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body" id="persona-detail-body">
+                <!-- Filled dynamically -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary modal-cancel">Close</button>
+                <button class="btn btn-primary" id="btn-persona-save">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script src="/js/chat.js"></script>
+    <script src="/js/ingest.js"></script>
+    <script src="/js/persona.js"></script>
+    <script src="/js/settings.js"></script>
+    <script src="/js/app.js"></script>
+</body>
+</html>
