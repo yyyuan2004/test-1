@@ -1,10 +1,10 @@
-"""Unified LLM router — delegates to OpenAI / Anthropic / local backend."""
+"""Unified LLM router — delegates to OpenAI / Anthropic / DeepSeek / Qwen / Zhipu / local."""
 
 from __future__ import annotations
 
 from typing import AsyncIterator, Protocol, runtime_checkable
 
-from config.settings import Settings
+from config.settings import Settings, ALL_BACKENDS
 
 
 @runtime_checkable
@@ -14,7 +14,6 @@ class LLMBackend(Protocol):
     async def generate(
         self, messages: list[dict], *, temperature: float = 0.7
     ) -> AsyncIterator[str]:
-        """Yield tokens as they arrive."""
         ...  # pragma: no cover
 
 
@@ -28,20 +27,39 @@ class LLMRouter:
 
     def _get_backend(self, name: str) -> LLMBackend:
         if name not in self._backends:
+            s = self._settings
             if name == "openai":
                 from backend.services.llm_openai import OpenAIBackend
-
-                self._backends[name] = OpenAIBackend(self._settings)
+                self._backends[name] = OpenAIBackend(s)
             elif name == "anthropic":
                 from backend.services.llm_claude import ClaudeBackend
-
-                self._backends[name] = ClaudeBackend(self._settings)
+                self._backends[name] = ClaudeBackend(s)
             elif name == "local":
                 from backend.services.llm_local import LocalBackend
-
-                self._backends[name] = LocalBackend(self._settings)
+                self._backends[name] = LocalBackend(s)
+            elif name == "deepseek":
+                from backend.services.llm_openai_compat import OpenAICompatBackend
+                self._backends[name] = OpenAICompatBackend(
+                    api_key=s.deepseek_api_key,
+                    model=s.deepseek_model,
+                    base_url=s.deepseek_base_url,
+                )
+            elif name == "qwen":
+                from backend.services.llm_openai_compat import OpenAICompatBackend
+                self._backends[name] = OpenAICompatBackend(
+                    api_key=s.qwen_api_key,
+                    model=s.qwen_model,
+                    base_url=s.qwen_base_url,
+                )
+            elif name == "zhipu":
+                from backend.services.llm_openai_compat import OpenAICompatBackend
+                self._backends[name] = OpenAICompatBackend(
+                    api_key=s.zhipu_api_key,
+                    model=s.zhipu_model,
+                    base_url=s.zhipu_base_url,
+                )
             else:
-                raise ValueError(f"Unknown backend: {name}")
+                raise ValueError(f"未知的后端: {name}")
         return self._backends[name]
 
     @property
@@ -49,8 +67,8 @@ class LLMRouter:
         return self._active
 
     def switch(self, name: str) -> None:
-        if name not in ("openai", "anthropic", "local"):
-            raise ValueError(f"Unknown backend: {name}")
+        if name not in ALL_BACKENDS:
+            raise ValueError(f"未知的后端: {name}")
         self._active = name
 
     async def generate(

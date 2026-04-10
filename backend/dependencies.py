@@ -7,6 +7,9 @@ from backend.services.embeddings import EmbeddingService
 from backend.services.llm_router import LLMRouter
 from backend.services.chat_service import ChatService
 from backend.services.rag import RAGService
+from backend.services.memory import MemoryManager
+from backend.services.humanizer import Humanizer
+from backend.services.slang_dict import SlangDict
 from backend.models.conversation import ConversationStore
 from config.settings import get_settings
 
@@ -17,11 +20,14 @@ _llm_router: LLMRouter | None = None
 _rag_service: RAGService | None = None
 _chat_service: ChatService | None = None
 _conversation_store: ConversationStore | None = None
+_memory_manager: MemoryManager | None = None
+_humanizer: Humanizer | None = None
 
 
 async def startup() -> None:
     global _embedding_service, _vector_store, _llm_router
     global _rag_service, _chat_service, _conversation_store
+    global _memory_manager, _humanizer
 
     settings = get_settings()
 
@@ -39,11 +45,27 @@ async def startup() -> None:
     _conversation_store = ConversationStore(settings.db_path)
     await _conversation_store.init()
 
+    _memory_manager = MemoryManager(
+        conversations=_conversation_store,
+        short_term_limit=settings.memory_short_term_limit,
+        summary_threshold=settings.memory_summary_threshold,
+        max_summaries=settings.memory_max_summaries,
+    )
+
+    _humanizer = Humanizer(
+        enabled=settings.humanize_enabled,
+        filler_rate=settings.humanize_filler_rate,
+        typo_rate=settings.humanize_typo_rate,
+        slang_dict=SlangDict(),
+    )
+
     _chat_service = ChatService(
         llm=_llm_router,
         rag=_rag_service,
         conversations=_conversation_store,
         personas_dir=settings.personas_dir,
+        memory=_memory_manager,
+        humanizer=_humanizer,
     )
 
 
@@ -83,3 +105,13 @@ def get_chat_service() -> ChatService:
 def get_conversation_store() -> ConversationStore:
     assert _conversation_store is not None
     return _conversation_store
+
+
+def get_memory_manager() -> MemoryManager:
+    assert _memory_manager is not None
+    return _memory_manager
+
+
+def get_humanizer() -> Humanizer:
+    assert _humanizer is not None
+    return _humanizer

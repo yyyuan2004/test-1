@@ -29,7 +29,7 @@ async def lifespan(app: FastAPI):
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="PersonaMirror", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(title="PersonaMirror", version="0.2.0", lifespan=lifespan)
 
     app.add_middleware(
         CORSMiddleware,
@@ -39,13 +39,14 @@ def create_app() -> FastAPI:
     )
 
     # --- API routers ---
-    from backend.routers import chat, ingest, models, persona, web_learn
+    from backend.routers import chat, ingest, models, persona, web_learn, status
 
     app.include_router(chat.router, prefix="/api")
     app.include_router(ingest.router, prefix="/api")
     app.include_router(persona.router, prefix="/api")
     app.include_router(models.router, prefix="/api")
     app.include_router(web_learn.router, prefix="/api")
+    app.include_router(status.router, prefix="/api")
 
     # --- Static frontend ---
     frontend_dir = Path(__file__).resolve().parent.parent / "frontend"

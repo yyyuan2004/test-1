@@ -1,8 +1,7 @@
-"""SQLite-backed conversation history."""
+"""SQLite-backed conversation history with tiered memory support."""
 
 from __future__ import annotations
 
-import json
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -21,7 +20,7 @@ class ConversationStore:
             CREATE TABLE IF NOT EXISTS conversations (
                 id TEXT PRIMARY KEY,
                 persona_id TEXT DEFAULT '',
-                title TEXT DEFAULT 'New Chat',
+                title TEXT DEFAULT '新对话',
                 created_at TEXT,
                 updated_at TEXT
             )
@@ -32,6 +31,17 @@ class ConversationStore:
                 conversation_id TEXT,
                 role TEXT,
                 content TEXT,
+                created_at TEXT,
+                FOREIGN KEY (conversation_id) REFERENCES conversations(id)
+            )
+        """)
+        # Mid-term memory: conversation summaries
+        await self._db.execute("""
+            CREATE TABLE IF NOT EXISTS summaries (
+                id TEXT PRIMARY KEY,
+                conversation_id TEXT,
+                content TEXT,
+                message_position INTEGER,
                 created_at TEXT,
                 FOREIGN KEY (conversation_id) REFERENCES conversations(id)
             )
@@ -47,7 +57,7 @@ class ConversationStore:
         now = datetime.utcnow().isoformat()
         await self._db.execute(
             "INSERT INTO conversations (id, persona_id, title, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
-            (cid, persona_id, "New Chat", now, now),
+            (cid, persona_id, "新对话", now, now),
         )
         await self._db.commit()
         return cid
@@ -74,6 +84,14 @@ class ConversationStore:
         rows = await cursor.fetchall()
         return [{"role": r[0], "content": r[1], "created_at": r[2]} for r in rows]
 
+    async def get_message_count(self, conversation_id: str) -> int:
+        cursor = await self._db.execute(
+            "SELECT COUNT(*) FROM messages WHERE conversation_id = ?",
+            (conversation_id,),
+        )
+        row = await cursor.fetchone()
+        return row[0] if row else 0
+
     async def list_conversations(self) -> list[dict]:
         cursor = await self._db.execute(
             "SELECT id, persona_id, title, created_at, updated_at FROM conversations ORDER BY updated_at DESC"
@@ -91,6 +109,34 @@ class ConversationStore:
         await self._db.commit()
 
     async def delete_conversation(self, conversation_id: str) -> None:
+        await self._db.execute("DELETE FROM summaries WHERE conversation_id = ?", (conversation_id,))
         await self._db.execute("DELETE FROM messages WHERE conversation_id = ?", (conversation_id,))
         await self._db.execute("DELETE FROM conversations WHERE id = ?", (conversation_id,))
         await self._db.commit()
+
+    # --- Summary (mid-term memory) ---
+    async def add_summary(self, conversation_id: str, content: str, message_position: int) -> str:
+        sid = str(uuid.uuid4())
+        now = datetime.utcnow().isoformat()
+        await self._db.execute(
+            "INSERT INTO summaries (id, conversation_id, content, message_position, created_at) VALUES (?, ?, ?, ?, ?)",
+            (sid, conversation_id, content, message_position, now),
+        )
+        await self._db.commit()
+        return sid
+
+    async def get_summaries(self, conversation_id: str) -> list[dict]:
+        cursor = await self._db.execute(
+            "SELECT content, message_position, created_at FROM summaries WHERE conversation_id = ? ORDER BY message_position ASC",
+            (conversation_id,),
+        )
+        rows = await cursor.fetchall()
+        return [{"content": r[0], "message_position": r[1], "created_at": r[2]} for r in rows]
+
+    async def get_last_summary_position(self, conversation_id: str) -> int:
+        cursor = await self._db.execute(
+            "SELECT MAX(message_position) FROM summaries WHERE conversation_id = ?",
+            (conversation_id,),
+        )
+        row = await cursor.fetchone()
+        return row[0] if row and row[0] is not None else 0

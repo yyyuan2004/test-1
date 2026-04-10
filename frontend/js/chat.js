@@ -1,5 +1,5 @@
 /**
- * Chat module — handles message display and streaming.
+ * Chat 模块 — 消息展示与流式输出
  */
 const Chat = {
     currentConversationId: null,
@@ -18,7 +18,6 @@ const Chat = {
         });
 
         input.addEventListener('input', () => {
-            // Auto-resize textarea
             input.style.height = 'auto';
             input.style.height = Math.min(input.scrollHeight, 150) + 'px';
         });
@@ -42,19 +41,17 @@ const Chat = {
         this.currentPersonaId = personaId || '';
         this.show();
 
-        // Update header
         const nameEl = document.getElementById('chat-persona-name');
         const badgeEl = document.getElementById('chat-persona-badge');
-        nameEl.textContent = title || 'New Chat';
+        nameEl.textContent = title || '新对话';
 
         if (personaId) {
             badgeEl.classList.remove('hidden');
-            badgeEl.textContent = 'Persona';
+            badgeEl.textContent = '人格';
         } else {
             badgeEl.classList.add('hidden');
         }
 
-        // Load messages
         const container = document.getElementById('chat-messages');
         container.innerHTML = '';
 
@@ -65,10 +62,9 @@ const Chat = {
             }
             this.scrollToBottom();
         } catch (e) {
-            console.error('Failed to load messages:', e);
+            console.error('加载消息失败:', e);
         }
 
-        // Focus input
         document.getElementById('chat-input').focus();
     },
 
@@ -79,11 +75,11 @@ const Chat = {
 
         const nameEl = document.getElementById('chat-persona-name');
         const badgeEl = document.getElementById('chat-persona-badge');
-        nameEl.textContent = personaName || 'New Chat';
+        nameEl.textContent = personaName || '新对话';
 
         if (personaId) {
             badgeEl.classList.remove('hidden');
-            badgeEl.textContent = personaName || 'Persona';
+            badgeEl.textContent = personaName || '人格';
         } else {
             badgeEl.classList.add('hidden');
         }
@@ -97,7 +93,7 @@ const Chat = {
         const div = document.createElement('div');
         div.className = `message message-${role}`;
 
-        const avatarText = role === 'user' ? 'U' : 'AI';
+        const avatarText = role === 'user' ? '我' : 'AI';
         div.innerHTML = `
             <div class="message-avatar">${avatarText}</div>
             <div class="message-bubble">${this.escapeHtml(content)}</div>
@@ -145,11 +141,9 @@ const Chat = {
         input.value = '';
         input.style.height = 'auto';
 
-        // Show user message
         this.appendMessage('user', text);
         this.scrollToBottom();
 
-        // Show streaming placeholder
         this.appendStreamingMessage();
         this.scrollToBottom();
 
@@ -164,7 +158,6 @@ const Chat = {
             onStart: (data) => {
                 if (data.conversation_id && !this.currentConversationId) {
                     this.currentConversationId = data.conversation_id;
-                    // Refresh sidebar conversation list
                     App.loadConversations();
                 }
             },
@@ -182,7 +175,7 @@ const Chat = {
                 const msg = document.getElementById('streaming-message');
                 if (msg) {
                     const bubble = msg.querySelector('.message-bubble');
-                    bubble.textContent = `Error: ${err.message}`;
+                    bubble.textContent = `错误: ${err.message}`;
                     bubble.style.color = 'var(--danger)';
                     msg.removeAttribute('id');
                 }

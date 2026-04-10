@@ -1,5 +1,5 @@
 /**
- * Ingest module — file upload and chat log processing.
+ * Ingest 模块 — 文件上传与聊天记录处理
  */
 const Ingest = {
     selectedFiles: [],
@@ -16,7 +16,6 @@ const Ingest = {
         fileInput.addEventListener('change', (e) => this.onFilesSelected(e.target.files));
         submitBtn.addEventListener('click', () => this.submit());
 
-        // Drag and drop
         zone.addEventListener('dragover', (e) => {
             e.preventDefault();
             zone.classList.add('drag-over');
@@ -35,7 +34,6 @@ const Ingest = {
             }
         });
 
-        // Modal close handlers
         this.setupModalClose('modal-upload');
     },
 
@@ -48,14 +46,12 @@ const Ingest = {
         document.getElementById('upload-target-speaker').value = '';
         document.getElementById('upload-status').classList.add('hidden');
         document.getElementById('btn-upload-submit').disabled = true;
-
-        // Populate persona selector
         this.populatePersonaSelect();
     },
 
     async populatePersonaSelect() {
         const select = document.getElementById('upload-persona-select');
-        select.innerHTML = '<option value="">Create new persona</option>';
+        select.innerHTML = '<option value="">创建新人格</option>';
         try {
             const personas = await API.get('/api/personas');
             for (const p of personas) {
@@ -65,7 +61,7 @@ const Ingest = {
                 select.appendChild(opt);
             }
         } catch (e) {
-            console.error('Failed to load personas:', e);
+            console.error('加载人格列表失败:', e);
         }
     },
 
@@ -78,7 +74,7 @@ const Ingest = {
         if (this.selectedFiles.length > 0) {
             status.classList.remove('hidden');
             status.className = 'upload-status success';
-            status.textContent = `Selected ${this.selectedFiles.length} file(s): ${this.selectedFiles.map(f => f.name).join(', ')}`;
+            status.textContent = `已选择 ${this.selectedFiles.length} 个文件: ${this.selectedFiles.map(f => f.name).join(', ')}`;
         }
     },
 
@@ -94,7 +90,7 @@ const Ingest = {
         submitBtn.disabled = true;
         status.classList.remove('hidden');
         status.className = 'upload-status loading';
-        status.textContent = 'Uploading and analyzing... This may take a moment.';
+        status.textContent = '正在上传并分析... 请稍候。';
 
         let lastResult = null;
 
@@ -111,16 +107,15 @@ const Ingest = {
                 lastResult = await API.upload('/api/ingest', formData);
             } catch (e) {
                 status.className = 'upload-status error';
-                status.textContent = `Error processing ${file.name}: ${e.message}`;
+                status.textContent = `处理 ${file.name} 时出错: ${e.message}`;
                 submitBtn.disabled = false;
                 return;
             }
         }
 
         status.className = 'upload-status success';
-        status.textContent = `Done! Analyzed ${lastResult.messages_parsed} messages, stored ${lastResult.chunks_stored} chunks. Persona: ${lastResult.persona_name}`;
+        status.textContent = `完成！已分析 ${lastResult.messages_parsed} 条消息，存储 ${lastResult.chunks_stored} 个文本块。人格: ${lastResult.persona_name}`;
 
-        // Refresh persona list
         Persona.loadList();
         App.loadConversations();
 
