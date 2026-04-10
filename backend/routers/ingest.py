@@ -89,6 +89,12 @@ async def ingest_chat_log(
 
     profile.save(settings.personas_dir)
 
+    # PII masking before indexing
+    if settings.pii_masking_enabled:
+        from backend.services.pii_masker import mask_pii_batch
+        for m in messages:
+            m.text = mask_pii_batch([m.text])[0]
+
     # Chunk and embed messages for RAG
     texts = [m.text for m in messages]
     # Group short messages

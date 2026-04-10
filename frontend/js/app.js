@@ -1,5 +1,5 @@
 /**
- * App — main controller, initializes everything.
+ * App — 主控制器，初始化所有模块
  */
 const App = {
     init() {
@@ -17,11 +17,9 @@ const App = {
         const tabs = document.querySelectorAll('.nav-tab');
         tabs.forEach(tab => {
             tab.addEventListener('click', () => {
-                // Deactivate all tabs and panels
                 tabs.forEach(t => t.classList.remove('active'));
                 document.querySelectorAll('.sidebar-panel').forEach(p => p.classList.remove('active'));
 
-                // Activate clicked tab
                 tab.classList.add('active');
                 const panelId = `panel-${tab.dataset.tab}`;
                 document.getElementById(panelId).classList.add('active');
@@ -40,7 +38,7 @@ const App = {
         try {
             const conversations = await API.get('/api/conversations');
             if (conversations.length === 0) {
-                container.innerHTML = '<div class="empty-state">No conversations yet</div>';
+                container.innerHTML = '<div class="empty-state">暂无对话记录</div>';
                 return;
             }
 
@@ -52,7 +50,7 @@ const App = {
                     card.classList.add('active');
                 }
 
-                const date = c.updated_at ? new Date(c.updated_at).toLocaleDateString() : '';
+                const date = c.updated_at ? new Date(c.updated_at).toLocaleDateString('zh-CN') : '';
 
                 card.innerHTML = `
                     <div class="item-card-content">
@@ -60,20 +58,19 @@ const App = {
                         <div class="item-card-subtitle">${date}</div>
                     </div>
                     <div class="item-card-actions">
-                        <button title="Delete" data-action="delete">&times;</button>
+                        <button title="删除" data-action="delete">&times;</button>
                     </div>
                 `;
 
                 card.addEventListener('click', () => {
                     Chat.loadConversation(c.id, c.persona_id, c.title);
-                    // Update active state
                     container.querySelectorAll('.item-card').forEach(el => el.classList.remove('active'));
                     card.classList.add('active');
                 });
 
                 card.querySelector('[data-action="delete"]').addEventListener('click', async (e) => {
                     e.stopPropagation();
-                    if (confirm('Delete this conversation?')) {
+                    if (confirm('确定要删除这个对话吗？')) {
                         await API.del(`/api/conversations/${c.id}`);
                         if (Chat.currentConversationId === c.id) {
                             Chat.showWelcome();
@@ -85,7 +82,7 @@ const App = {
                 container.appendChild(card);
             }
         } catch (e) {
-            container.innerHTML = '<div class="empty-state">Failed to load conversations</div>';
+            container.innerHTML = '<div class="empty-state">加载对话列表失败</div>';
             console.error(e);
         }
     },
@@ -98,5 +95,5 @@ const App = {
     },
 };
 
-// Start the app
+// 启动应用
 document.addEventListener('DOMContentLoaded', () => App.init());
